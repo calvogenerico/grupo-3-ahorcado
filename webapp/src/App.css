@@ -1,10 +1,104 @@
+/* Contenedor principal */
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  background: linear-gradient(135deg, #1e1e2f, #2b2b4f);
+  color: #fff;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
+/* Título principal */
+.app-title {
+  font-size: 2.8rem;
+  margin-bottom: 2rem;
+  color: #00e0ff;
+  text-shadow: 0 0 12px #00e0ff;
+  letter-spacing: 1px;
+}
+
+/* Secciones */
+.section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 20px rgba(0, 224, 255, 0.4);
+}
+
+.section h3 {
+  color: #ffd966;
+  margin-bottom: 0.3rem;
+}
+
+.section p {
+  color: #ddd;
+  margin-bottom: 1rem;
+}
+
+/* Botones */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+.btn.primary {
+  background-color: #28a745;
+}
+
+.btn.primary:hover {
+  background-color: #1e7e34;
+}
+
+/* Contador */
+.info {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 0.5rem;
+  color: #bbb;
+}
+
+/* Tarjeta base (mantiene compatibilidad con el diseño anterior) */
+.card {
+  padding: 2em;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+}
+
+/* Texto inferior */
+.read-the-docs {
+  color: #aaa;
+  margin-top: 2rem;
+  font-size: 0.9rem;
+}
+
+/* Logo animado (si lo usás todavía) */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -31,12 +125,4 @@
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
