@@ -11,6 +11,7 @@ import { StartGame } from './pages/StartGame.tsx'
 import { JoinGame } from './pages/JoinGame.tsx'
 import { SubmitGuess } from './pages/SubmitGuess.tsx'
 import { SubmitProof } from './pages/SubmitProof.tsx'
+import { TestVerifier } from "./pages/TestVerifier.tsx";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="join/:gameId" element={<JoinGame/>} />
               <Route path="submit-guess/:gameId" element={<SubmitGuess/>} />
               <Route path="submit-proof/:gameId" element={<SubmitProof/>} />
+              <Route path="test-verifier" element={<TestVerifier/>} />
             </Route>
           </Routes>
         </BrowserRouter>

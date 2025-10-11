@@ -2,21 +2,43 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { hangmanAbi } from "../abis/hangman-abi";
-import { bytesToHex, numberToHex, pad, parseEventLogs, type Hex } from "viem";
+import {
+  bytesToHex,
+  encodeFunctionData,
+  type Hex,
+  numberToHex,
+  pad,
+  parseEventLogs,
+  toFunctionSelector,
+  type AbiError
+} from "viem";
+import { verifierAbi } from "../abis/verifier-abi.ts";
 
-const HANGMAN_ADDRESS= import.meta.env.VITE_HANGMAN_ADDRESS;
+const HANGMAN_ADDRESS = import.meta.env.VITE_HANGMAN_ADDRESS;
+const VERIFIER_ADDRESS = import.meta.env.VITE_VERIFIER_ADDRESS;
 
-export function useAsyncAction<T>(callback: (...args: any[]) => Promise<T>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Fn = (...args: any) => any;
+
+type AsyncAction<T extends Fn> = {
+  waiting: boolean;
+  ready: boolean;
+  res: ReturnType<T> | undefined;
+  call: (...args: Parameters<T>) => void | Promise<void>;
+}
+
+export function useAsyncAction<T extends Fn>(callback: T): AsyncAction<T> {
   const [waiting, setWaiting] = useState(false);
   const [ready, setReady] = useState(false);
-  const [res, setRes] = useState<T | undefined>(undefined);
-  const call = async (...args: any[]) => {
+  const [res, setRes] = useState<ReturnType<T> | undefined>(undefined);
+  const call = async (...args: Parameters<T>) => {
     setWaiting(true);
     const res = await callback(...args);
     setRes(res);
     setWaiting(false);
     setReady(true);
   };
+
   return {
     call,
     waiting,
@@ -26,11 +48,11 @@ export function useAsyncAction<T>(callback: (...args: any[]) => Promise<T>) {
 }
 
 export function useHangman() {
-  const { isConnected } = useAccount();
+  const {isConnected} = useAccount();
   const navigate = useNavigate();
-  const { data: walletClient, error } = useWalletClient();
+  const {data: walletClient, error} = useWalletClient();
   const publicClient = usePublicClient();
-  
+
   const startGame = useAsyncAction(async (commitment: bigint) => {
     if (!isConnected || !walletClient || !publicClient) {
       console.log(error);
@@ -50,8 +72,8 @@ export function useHangman() {
       args: [pad(numberToHex(commitment)), 16]
     });
 
-    const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash});
-    const logs = parseEventLogs({ 
+    const receipt = await publicClient!.waitForTransactionReceipt({hash: txHash});
+    const logs = parseEventLogs({
       abi: hangmanAbi,
       logs: receipt.logs,
     });
@@ -59,7 +81,7 @@ export function useHangman() {
     const newGameLog = logs.find(l => l.eventName === 'GameCreated');
 
     if (newGameLog === undefined) {
-      throw new  Error('No new game event');
+      throw new Error('No new game event');
     }
 
     return {
@@ -94,7 +116,7 @@ export function useHangman() {
       address: HANGMAN_ADDRESS
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({hash: txHash});
 
     const logs = parseEventLogs({
       abi: hangmanAbi,
@@ -115,7 +137,7 @@ export function useHangman() {
     };
   });
 
-  const submitGuess = useAsyncAction(async(gameId: string, guess: string) => {
+  const submitGuess = useAsyncAction(async (gameId: string, guess: string) => {
     if (!walletClient || !publicClient) {
       console.log(walletClient, error);
       throw new Error('falta algo');
@@ -131,7 +153,7 @@ export function useHangman() {
       address: HANGMAN_ADDRESS
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({hash: txHash});
 
     const logs = parseEventLogs({
       abi: hangmanAbi,
@@ -159,16 +181,14 @@ export function useHangman() {
 
     const positionsNums = positions.map(b => b ? 1n : 0n);
 
-    console.log('ANTEs')
     const txHash = await walletClient.writeContract({
       abi: hangmanAbi,
       functionName: 'submitProof',
       args: [BigInt(gameId), bytesToHex(proof), positionsNums],
       address: HANGMAN_ADDRESS
     });
-    console.log('DESPUES')
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({hash: txHash});
 
     console.log('receipt', receipt);
 
@@ -179,10 +199,10 @@ export function useHangman() {
 
     const log = logs.find(l => l.eventName === 'ProofVerified');
 
-    if(log === undefined) {
+    if (log === undefined) {
       throw new Error('No log!')
     }
-    
+
     return {
       gameId: log.topics[0],
       playar: log.topics[1],
@@ -190,12 +210,46 @@ export function useHangman() {
     }
   })
 
+  const testVerifier = useAsyncAction(async (proof: Uint8Array, publicInputs: Hex[]) => {
+    if (!walletClient || !publicClient) {
+      return;
+    }
+    console.log(publicInputs);
+
+    try {
+      console.log('antes');
+      const res = await publicClient.call({
+        to: VERIFIER_ADDRESS,
+        data: encodeFunctionData({
+          abi: verifierAbi,
+          functionName: 'verify',
+          args: [bytesToHex(proof), publicInputs]
+        })
+      });
+      console.log('después');
+
+      console.log(res);
+      return res;
+    } catch (err) {
+      const errors = verifierAbi.filter(e => e.type === 'error');
+      const coso = errors.map(e => {
+        const selector = toFunctionSelector(e as AbiError);
+        return {
+          selector,
+          name: e.name
+        }
+      });
+      console.log(coso);
+      throw err;
+    }
+  });
 
   return {
     startGame,
     gameById,
     joinGame,
     submitGuess,
-    submitProof
+    submitProof,
+    testVerifier
   }
 }

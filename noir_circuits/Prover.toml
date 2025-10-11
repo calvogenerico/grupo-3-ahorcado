@@ -1,5 +1,4 @@
-commitment = ""
-guess = ""
-positions = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-word = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-word_len = ""
+commitment = "4782412217955657599782766322817543863308715516222307791834709810029761987868"
+guess = "97"
+positions = [false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false]
+word = ["104", "111", "108", "97", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"]

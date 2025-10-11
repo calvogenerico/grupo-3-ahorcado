@@ -19,4 +19,4 @@ docker compose up -d;
     cd $HERE/contracts &&
     bash $HERE/contracts/send-abi.sh
 )
-(cd $HERE/webapp && yarn dev)
+(cd $HERE/webapp && pnpm dev)

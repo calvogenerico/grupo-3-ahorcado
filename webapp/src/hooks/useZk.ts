@@ -20,7 +20,10 @@ export function useZk() {
       chars.push(0);
     }
 
+
     const commitment = poseidon2Hash(chars.map(c => BigInt(c)));
+    console.log("chars", chars);
+    console.log("commitment", commitment);
     return {
       commitment,
       chars
@@ -36,14 +39,17 @@ export function useZk() {
     const {commitment, chars} = calculateCommitment(word);
     const positions = chars.map(c => c === guessCode);
 
+    console.log('proof 1');
     const wtns = await noir.execute({
       word: chars.map(c => c.toString()),
       positions,
       guess: guessCode.toString(),
       commitment: commitment.toString()
     });
+    console.log('proof 2');
 
     const proof = await backend.generateProof(wtns.witness);
+    console.log('proof 3');
 
     return {
       proof,
