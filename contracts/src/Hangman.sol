@@ -145,7 +145,7 @@ contract Hangman is Ownable {
         emit GuessSubmitted(_gameId, msg.sender, _letter);
     }
 
-    function testVerify(Proof calldata proof, uint[18] calldata pubSignals) public returns (bool) {
+    function testVerify(Proof calldata proof, uint[18] calldata pubSignals) public view returns (bool) {
       return verifier.verifyProof(proof.pA, proof.pB, proof.pC, pubSignals);
     }
 

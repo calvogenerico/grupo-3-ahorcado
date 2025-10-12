@@ -13,7 +13,7 @@ contract MockVerifier is IGroth16Verifier {
     shouldVerify = _shouldVerify;
   }
 
-  function verifyProof(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, uint[18] calldata _pubSignals) override public view returns (bool) {
+  function verifyProof(uint[2] calldata, uint[2][2] calldata, uint[2] calldata, uint[18] calldata) override public view returns (bool) {
     return shouldVerify;
   }
 
@@ -39,6 +39,15 @@ contract HangmanTest is Test {
 
   uint256 public constant LOWER_A = 97;
   uint256 public constant UPPER_A = 65;
+  uint256 public constant LOWER_B = 98;
+  uint256 public constant LOWER_E = 101;
+  uint256 public constant LOWER_G = 103;
+  uint256 public constant LOWER_H = 104;
+  uint256 public constant LOWER_L = 108;
+  uint256 public constant LOWER_W = 119;
+  uint256 public constant LOWER_X = 120;
+  uint256 public constant LOWER_Y = 121;
+  uint256 public constant LOWER_Z = 122;
   uint256 public constant CHAR_1 = 49;
   uint256 public constant CHAR_BANG = 33;
 
@@ -271,220 +280,221 @@ contract HangmanTest is Test {
     hangman.submitGuess(0, LOWER_A);
   }
 
-//    function test_SubmitGuess_RevertIf_GuessInCourse() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "a");
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.GuessInCourse.selector);
-//        hangman.submitGuess(0, "b");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_PlayerDead() public {
-//        _setupActiveGame();
-//
-//        // Make player1 lose all attempts
-//        for (uint8 i = 0; i < 6; i++) {
-//            bytes1 letter = bytes1(uint8(97 + i)); // a, b, c, d, e, f
-//
-//            vm.prank(player1);
-//            hangman.submitGuess(0, letter);
-//
-//            // Letter not in word
-//            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//            vm.prank(player2);
-//            hangman.submitProof(0, "", positions);
-//        }
-//
-//        // Try to guess after death
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.DeadPlayer.selector);
-//        hangman.submitGuess(0, "g");
-//    }
-//
-//    function test_SubmitGuess_MultipleDifferentLetters() public {
-//        _setupActiveGame();
-//
-//        bytes1[3] memory letters = [bytes1("a"), bytes1("e"), bytes1("z")];
-//
-//        for (uint256 i = 0; i < letters.length; i++) {
-//            vm.prank(player1);
-//            hangman.submitGuess(0, letters[i]);
-//
-//            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//            vm.prank(player2);
-//            hangman.submitProof(0, "", positions);
-//        }
-//
-//        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
-//
-//        // Check bitmap: 'a'=0, 'e'=4, 'z'=25
-//        uint32 expectedBitmap = (1 << 0) | (1 << 4) | (1 << 25);
-//        assertEq(p1State.guessedLetters, expectedBitmap);
-//    }
-//
-//    // ============================================
-//    // SUBMIT PROOF TESTS
-//    // ============================================
-//
-//    function test_SubmitProof_LetterNotInWord() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "x");
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        vm.prank(player2);
-//
-//        vm.expectEmit(true, true, false, true);
-//        emit ProofVerified(0, player2, positions);
-//
-//        hangman.submitProof(0, "", positions);
-//
-//        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
-//
-//        assertEq(p1State.currentGuess, bytes1(0));
-//        assertEq(p1State.remainingAttempts, 5);
-//        for (uint8 i = 0; i < word2Length; i++)
-//            assertEq(p1State.revealedLetters[i], 0);
-//    }
-//
-//    function test_SubmitProof_LetterInWord_SinglePosition() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "h");
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//        positions[0] = 1;
-//
-//        vm.prank(player2);
-//        hangman.submitProof(0, "", positions);
-//
-//        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
-//
-//        assertEq(p1State.currentGuess, bytes1(0));
-//        assertEq(p1State.remainingAttempts, 6);
-//        assertEq(p1State.revealedLetters[0], "h");
-//        for (uint8 i = 1; i < word2Length; i++)
-//            assertEq(p1State.revealedLetters[i], 0);
-//    }
-//
-//    function test_SubmitProof_LetterInWord_MultiplePositions() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "l");
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//        positions[2] = 1;
-//        positions[3] = 1;
-//
-//        vm.prank(player2);
-//        hangman.submitProof(0, "", positions);
-//
-//        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
-//
-//        assertEq(p1State.currentGuess, bytes1(0));
-//        assertEq(p1State.remainingAttempts, 6);
-//        assertEq(p1State.revealedLetters[2], "l");
-//        assertEq(p1State.revealedLetters[3], "l");
-//        for (uint8 i = 0; i < word2Length; i++) {
-//            if (i != 2 && i != 3) assertEq(p1State.revealedLetters[i], 0);
-//        }
-//    }
-//
-//    function test_SubmitProof_RevertIf_NoGuessInCourse() public {
-//        _setupActiveGame();
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.NoGuessInCourse.selector);
-//        hangman.submitProof(0, "", positions);
-//    }
-//
-//    function test_SubmitProof_RevertIf_WrongProver() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "a");
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        // Player1 trying to prove their own guess
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.NoGuessInCourse.selector);
-//        hangman.submitProof(0, "", positions);
-//    }
-//
-//    function test_SubmitProof_RevertIf_VerificationFails() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "a");
-//
-//        verifier.setShouldVerify(false);
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.Cheater.selector);
-//        hangman.submitProof(0, "", positions);
-//    }
-//
-//    function test_SubmitProof_RevertIf_InvalidPositions_OutOfBounds() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "a");
-//
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//        positions[word2Length + 1] = 1; // Beyond word length
-//
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.InvalidInput.selector);
-//        hangman.submitProof(0, "", positions);
-//    }
-//
-//    // ============================================
-//    // GAME END SCENARIOS
-//    // ============================================
-//
-//    function test_GameEnd_Tie_BothComplete_SameAttempts() public {
-//        _setupActiveGame();
-//
-//        uint256[] memory p1Positions = new uint256[](hangman.MAX_WORD_LEN());
-//        uint256[] memory p2Positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        for (uint8 i = 0; i < 6; i++) p1Positions[i] = 1;
-//        for (uint8 i = 0; i < 5; i++) p2Positions[i] = 1;
-//
-//        // Player1 completes
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "w");
-//
-//        vm.prank(player2);
-//        hangman.submitProof(0, "", p1Positions);
-//
-//        // Player2 completes
-//        vm.prank(player2);
-//        hangman.submitGuess(0, "w");
-//
-//        vm.prank(player1);
-//        hangman.submitProof(0, "", p2Positions);
-//
-//        (,,,, GameStatus status, address winner,,) = hangman.games(0);
-//
-//        assertEq(uint8(status), uint8(GameStatus.FINISHED));
-//        assertEq(winner, address(0));
-//    }
-//
+    function test_SubmitGuess_RevertIf_GuessInCourse() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_A);
+
+        vm.prank(player1);
+        vm.expectRevert(Hangman.GuessInCourse.selector);
+        hangman.submitGuess(0, LOWER_B);
+    }
+
+    function test_SubmitGuess_RevertIf_PlayerDead() public {
+        _setupActiveGame();
+
+        // Make player1 lose all attempts
+        for (uint8 i = 0; i < 6; i++) {
+            uint256 letter = LOWER_A + i; // a, b, c, d, e, f
+
+            vm.prank(player1);
+            hangman.submitGuess(0, letter);
+
+            // Letter not in word
+            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+            vm.prank(player2);
+            hangman.submitProof(0, _emptyProof(), positions);
+        }
+
+        // Try to guess after death
+        vm.prank(player1);
+        vm.expectRevert(Hangman.DeadPlayer.selector);
+        hangman.submitGuess(0, LOWER_G);
+    }
+
+    function test_SubmitGuess_MultipleDifferentLetters() public {
+        _setupActiveGame();
+
+        uint256[3] memory letters = [LOWER_A, LOWER_E, LOWER_Z];
+
+        for (uint256 i = 0; i < letters.length; i++) {
+            vm.prank(player1);
+            hangman.submitGuess(0, letters[i]);
+
+            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+            vm.prank(player2);
+            hangman.submitProof(0, _emptyProof(), positions);
+        }
+
+        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
+
+        // Check bitmap: 'a'=0, 'e'=4, 'z'=25
+        uint32 expectedBitmap = (1 << 0) | (1 << 4) | (1 << 25);
+        assertEq(p1State.guessedLetters, expectedBitmap);
+    }
+
+    // ============================================
+    // SUBMIT PROOF TESTS
+    // ============================================
+
+    function test_SubmitProof_LetterNotInWord() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+
+        hangman.submitGuess(0,  LOWER_X);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+        vm.prank(player2);
+
+        vm.expectEmit(true, true, false, true);
+        emit ProofVerified(0, player2, positions);
+
+        hangman.submitProof(0, _emptyProof(), positions);
+
+        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
+
+        assertEq(p1State.currentGuess, 0);
+        assertEq(p1State.remainingAttempts, 5);
+        for (uint8 i = 0; i < word2Length; i++)
+            assertEq(p1State.revealedLetters[i], 0);
+    }
+
+    function test_SubmitProof_LetterInWord_SinglePosition() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_H);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+        positions[0] = 1;
+
+        vm.prank(player2);
+        hangman.submitProof(0, _emptyProof(), positions);
+
+        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
+
+        assertEq(p1State.currentGuess, 0);
+        assertEq(p1State.remainingAttempts, 6);
+        assertEq(p1State.revealedLetters[0], LOWER_H);
+        for (uint8 i = 1; i < word2Length; i++)
+            assertEq(p1State.revealedLetters[i], 0);
+    }
+
+    function test_SubmitProof_LetterInWord_MultiplePositions() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_L);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+        positions[2] = 1;
+        positions[3] = 1;
+
+        vm.prank(player2);
+        hangman.submitProof(0, _emptyProof(), positions);
+
+        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
+
+        assertEq(p1State.currentGuess, 0);
+        assertEq(p1State.remainingAttempts, 6);
+        assertEq(p1State.revealedLetters[2], LOWER_L);
+        assertEq(p1State.revealedLetters[3], LOWER_L);
+        for (uint8 i = 0; i < word2Length; i++) {
+            if (i != 2 && i != 3) assertEq(p1State.revealedLetters[i], 0);
+        }
+    }
+
+    function test_SubmitProof_RevertIf_NoGuessInCourse() public {
+        _setupActiveGame();
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+        vm.prank(player2);
+        vm.expectRevert(Hangman.NoGuessInCourse.selector);
+        hangman.submitProof(0, _emptyProof(), positions);
+    }
+
+    function test_SubmitProof_RevertIf_WrongProver() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_A);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+        // Player1 trying to prove their own guess
+        vm.prank(player1);
+        vm.expectRevert(Hangman.NoGuessInCourse.selector);
+        hangman.submitProof(0, _emptyProof(), positions);
+    }
+
+    function test_SubmitProof_RevertIf_VerificationFails() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_A);
+
+        verifier.setShouldVerify(false);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+        vm.prank(player2);
+        vm.expectRevert(Hangman.Cheater.selector);
+        hangman.submitProof(0, _emptyProof(), positions);
+    }
+
+    function test_SubmitProof_RevertIf_InvalidPositions_OutOfBounds() public {
+        _setupActiveGame();
+
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_A);
+
+        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+        positions[word2Length + 1] = 1; // Beyond word length
+
+        vm.prank(player2);
+        vm.expectRevert(Hangman.InvalidInput.selector);
+        hangman.submitProof(0, _emptyProof(), positions);
+    }
+
+    // ============================================
+    // GAME END SCENARIOS
+    // ============================================
+
+    function test_GameEnd_Tie_BothComplete_SameAttempts() public {
+        _setupActiveGame();
+
+        uint256[] memory p1Positions = new uint256[](hangman.MAX_WORD_LEN());
+        uint256[] memory p2Positions = new uint256[](hangman.MAX_WORD_LEN());
+
+        for (uint8 i = 0; i < (word2Length); i++) p1Positions[i] = 1;
+        for (uint8 i = 0; i < (word1Length); i++) p2Positions[i] = 1;
+
+        // Player1 completes
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_W);
+
+        vm.prank(player2);
+        hangman.submitProof(0, _emptyProof(), p1Positions);
+
+        // Player2 completes
+        vm.prank(player2);
+        hangman.submitGuess(0, LOWER_W);
+
+        vm.prank(player1);
+        hangman.submitProof(0, _emptyProof(), p2Positions);
+
+        (,,,, GameStatus status, address winner,,) = hangman.games(0);
+
+        assertEq(uint8(status), uint8(GameStatus.FINISHED));
+        assertEq(winner, address(0));
+    }
+
 //    //TODO: revisar las winning conditions
 //    function test_GameEnd_Player2Wins_MoreLives() public {
 //        _setupActiveGame();
@@ -498,24 +508,24 @@ contract HangmanTest is Test {
 //
 //        // Player1 guesses wrong
 //        vm.prank(player1);
-//        hangman.submitGuess(0, "x");
+//        hangman.submitGuess(0, LOWER_X);
 //
 //        vm.prank(player2);
-//        hangman.submitProof(0, "", noPositions);
+//        hangman.submitProof(0, _emptyProof(), noPositions);
 //
 //        // Player1 completes
 //        vm.prank(player1);
-//        hangman.submitGuess(0, "y");
+//        hangman.submitGuess(0, LOWER_Y);
 //
 //        vm.prank(player2);
-//        hangman.submitProof(0, "", p1Positions);
+//        hangman.submitProof(0, _emptyProof(), p1Positions);
 //
 //        // Player2 completes
 //        vm.prank(player2);
-//        hangman.submitGuess(0, "z");
+//        hangman.submitGuess(0, LOWER_Z);
 //
 //        vm.prank(player1);
-//        hangman.submitProof(0, "", p2Positions);
+//        hangman.submitProof(0, _emptyProof(), p2Positions);
 //
 //        (,,,, GameStatus status, address winner,,) = hangman.games(0);
 //
@@ -523,78 +533,78 @@ contract HangmanTest is Test {
 //        assertEq(winner, player2);
 //    }
 //
-//    function test_GameEnds_Player1Wins_Completes() public {
-//        _setupActiveGame();
+    function test_GameEnds_Player1Wins_Completes() public {
+        _setupActiveGame();
+
+        // Make player 2 die first
+        for (uint8 i = 0; i < 6; i++) {
+            uint256 wrongLetter = LOWER_A + i;
+
+            vm.prank(player2);
+            hangman.submitGuess(0, wrongLetter);
+
+            uint256[] memory noPositions = new uint256[](hangman.MAX_WORD_LEN());
+
+            vm.prank(player1);
+            hangman.submitProof(0, _emptyProof(), noPositions);
+        }
+
+        // Player 1 guesses all letters correctly to complete the word
+        vm.prank(player1);
+        hangman.submitGuess(0, LOWER_X);
+
+        uint256[] memory allPositions = new uint256[](hangman.MAX_WORD_LEN());
+        for (uint256 i = 0; i < word2Length; i++) allPositions[i] = 1;
+
+        vm.prank(player2);
+        hangman.submitProof(0, _emptyProof(), allPositions);
+
+        (,,,, GameStatus status, address winner,,) = hangman.games(0);
+
+        assertEq(uint8(status), uint8(GameStatus.FINISHED));
+        assertEq(winner, player1);
+    }
 //
-//        // Make player 2 die first
-//        for (uint8 i = 0; i < 6; i++) {
-//            bytes1 wrongLetter = bytes1(97 + i);
-//
-//            vm.prank(player2);
-//            hangman.submitGuess(0, wrongLetter);
-//
-//            uint256[] memory noPositions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//            vm.prank(player1);
-//            hangman.submitProof(0, "", noPositions);
-//        }
-//
-//        // Player 1 guesses all letters correctly to complete the word
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "x");
-//
-//        uint256[] memory allPositions = new uint256[](hangman.MAX_WORD_LEN());
-//        for (uint256 i = 0; i < word2Length; i++) allPositions[i] = 1;
-//
-//        vm.prank(player2);
-//        hangman.submitProof(0, "", allPositions);
-//
-//        (,,,, GameStatus status, address winner,,) = hangman.games(0);
-//
-//        assertEq(uint8(status), uint8(GameStatus.FINISHED));
-//        assertEq(winner, player1);
-//    }
-//
-//    function test_GameEnds_BothDie() public {
-//        _setupActiveGame();
-//
-//        // Player 1 dies (6 wrong guesses)
-//        for (uint8 i = 0; i < 6; i++) {
-//            bytes1 letter = bytes1(uint8(97 + i));
-//
-//            vm.prank(player1);
-//            hangman.submitGuess(0, letter);
-//
-//            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//            vm.prank(player2);
-//            hangman.submitProof(0, "", positions);
-//        }
-//
-//        // Player 2 dies (6 wrong guesses)
-//        for (uint8 i = 6; i < 12; i++) {
-//            bytes1 letter = bytes1(uint8(97 + i));
-//
-//            vm.prank(player2);
-//            hangman.submitGuess(0, letter);
-//
-//            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//            vm.prank(player1);
-//            hangman.submitProof(0, "", positions);
-//        }
-//
-//        (,,,, GameStatus status, address winner,,) = hangman.games(0);
-//
-//        assertEq(uint8(status), uint8(GameStatus.FINISHED));
-//        assertEq(winner, address(0)); // Tie
-//    }
+    function test_GameEnds_BothDie() public {
+        _setupActiveGame();
+
+        // Player 1 dies (6 wrong guesses)
+        for (uint8 i = 0; i < 6; i++) {
+            uint256 letter = LOWER_A + i;
+
+            vm.prank(player1);
+            hangman.submitGuess(0, letter);
+
+            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+            vm.prank(player2);
+            hangman.submitProof(0, _emptyProof(), positions);
+        }
+
+        // Player 2 dies (6 wrong guesses)
+        for (uint8 i = 6; i < 12; i++) {
+            uint256 letter = LOWER_A + i;
+
+            vm.prank(player2);
+            hangman.submitGuess(0, letter);
+
+            uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+            vm.prank(player1);
+            hangman.submitProof(0, _emptyProof(), positions);
+        }
+
+        (,,,, GameStatus status, address winner,,) = hangman.games(0);
+
+        assertEq(uint8(status), uint8(GameStatus.FINISHED));
+        assertEq(winner, address(0)); // Tie
+    }
 //
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
 
-  function _emptyProof() internal returns (Hangman.Proof memory) {
+  function _emptyProof() internal pure returns (Hangman.Proof memory) {
     Hangman.Proof memory p;
     p.pA[0] = 0;
     p.pA[1] = 0;
