@@ -1,271 +1,276 @@
-//// SPDX-License-Identifier: UNLICENSED
-//pragma solidity ^0.8.13;
-//
-//import {Test} from "forge-std/Test.sol";
-//import {Hangman} from "../src/Hangman.sol";
-//import {IVerifier} from "../src/Verifier.sol";
-//import {PlayerState, GameStatus} from "../src/HangmanStructs.sol";
-//
-//contract MockVerifier is IVerifier {
-//    bool public shouldVerify;
-//
-//    constructor(bool _shouldVerify) {
-//        shouldVerify = _shouldVerify;
-//    }
-//
-//    function verify(bytes calldata, bytes32[] calldata) external view returns (bool) {
-//        return shouldVerify;
-//    }
-//
-//    function setShouldVerify(bool _shouldVerify) external {
-//        shouldVerify = _shouldVerify;
-//    }
-//}
-//
-//contract HangmanTest is Test {
-//    Hangman public hangman;
-//    MockVerifier public verifier;
-//
-//    address public owner = address(this);
-//    address public player1 = address(0x1);
-//    address public player2 = address(0x2);
-//    address public player3 = address(0x3);
-//
-//    bytes32 public constant commitment1 = keccak256(abi.encode(0));
-//    bytes32 public constant commitment2 = keccak256(abi.encode(0));
-//
-//    uint8 public constant word1Length = 7;
-//    uint8 public constant word2Length = 6;
-//
-//    event GameCreated(uint256 indexed gameId, address indexed player1, uint8 wordLength);
-//    event GameStarted(uint256 indexed gameId, address indexed player1, address indexed player2);
-//    event GuessSubmitted(uint256 indexed gameId, address indexed guesser, bytes1 letter);
-//    event ProofVerified(uint256 indexed gameId, address indexed prover, uint256[] positions);
-//    event GameFinished(uint256 indexed gameId, address indexed winner, string reason);
-//
-//    function setUp() public {
-//        verifier = new MockVerifier(true);
-//        hangman = new Hangman(verifier);
-//    }
-//
-//    // ============================================
-//    // CONSTRUCTOR & SETUP TESTS
-//    // ============================================
-//
-//    function test_Constructor() public view {
-//        assertEq(address(hangman.verifier()), address(verifier));
-//        assertEq(hangman.owner(), owner);
-//        assertEq(hangman.gameCounter(), 0);
-//        assertEq(hangman.MAX_WORD_LEN(), 16);
-//        assertEq(hangman.DEFAULT_ATTEMPTS(), 6);
-//    }
-//
-//    function test_SetVerifier_AsOwner() public {
-//        MockVerifier newVerifier = new MockVerifier(false);
-//
-//        vm.expectEmit(true, true, true, true);
-//        emit Hangman.VerifierUpdated(newVerifier);
-//
-//        hangman.setVerifier(newVerifier);
-//        assertEq(address(hangman.verifier()), address(newVerifier));
-//    }
-//
-//    function test_SetVerifier_RevertIf_NotOwner() public {
-//        MockVerifier newVerifier = new MockVerifier(false);
-//
-//        vm.prank(player1);
-//        vm.expectRevert();
-//        hangman.setVerifier(newVerifier);
-//    }
-//
-//    // ============================================
-//    // CREATE GAME TESTS
-//    // ============================================
-//
-//    function test_CreateGame_Success() public {
-//        vm.prank(player1);
-//
-//        vm.expectEmit(true, true, false, true);
-//        emit GameCreated(0, player1, word1Length);
-//
-//        hangman.createGame(commitment1, word1Length);
-//
-//        (address p1, address p2,,, GameStatus status,,,) = hangman.games(0);
-//
-//        assertEq(p1, player1);
-//        assertEq(p2, address(0));
-//        assertEq(uint8(status), uint8(GameStatus.WAITING_FOR_PLAYER));
-//        assertEq(hangman.gameCounter(), 1);
-//    }
-//
-//    function test_CreateGame_RevertIf_WordTooShort() public {
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidWordLenght.selector);
-//        hangman.createGame(commitment1, 0);
-//    }
-//
-//    function test_CreateGame_RevertIf_WordTooLong() public {
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidWordLenght.selector);
-//        hangman.createGame(commitment1, 17);
-//    }
-//
-//    function test_CreateGame_MultipleGames() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player2);
-//        hangman.createGame(commitment2, word2Length);
-//
-//        assertEq(hangman.gameCounter(), 2);
-//
-//        (address p1_game0,,,,,,,) = hangman.games(0);
-//        (address p1_game1,,,,,,,) = hangman.games(1);
-//
-//        assertEq(p1_game0, player1);
-//        assertEq(p1_game1, player2);
-//    }
-//
-//    // ============================================
-//    // JOIN GAME TESTS
-//    // ============================================
-//
-//    function test_JoinGame_Success() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player2);
-//
-//        vm.expectEmit(true, true, true, false);
-//        emit GameStarted(0, player1, player2);
-//
-//        hangman.joinGame(0, commitment2, word2Length);
-//
-//        (address p1, address p2,,, GameStatus status,,,) = hangman.games(0);
-//
-//        assertEq(p1, player1);
-//        assertEq(p2, player2);
-//        assertEq(uint8(status), uint8(GameStatus.ACTIVE));
-//    }
-//
-//    function test_JoinGame_RevertIf_GameNotFound() public {
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.GameNotFound.selector);
-//        hangman.joinGame(999, commitment2, word2Length);
-//    }
-//
-//    function test_JoinGame_RevertIf_AlreadyStarted() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player2);
-//        hangman.joinGame(0, commitment2, word2Length);
-//
-//        vm.prank(player3);
-//        vm.expectRevert(Hangman.GameAlreadyStarted.selector);
-//        hangman.joinGame(0, commitment2, word2Length);
-//    }
-//
-//    function test_JoinGame_RevertIf_JoiningOwnGame() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidPlayer.selector);
-//        hangman.joinGame(0, commitment2, word2Length);
-//    }
-//
-//    function test_JoinGame_RevertIf_InvalidWordLength() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.InvalidWordLenght.selector);
-//        hangman.joinGame(0, commitment2, 0);
-//
-//        vm.prank(player2);
-//        vm.expectRevert(Hangman.InvalidWordLenght.selector);
-//        hangman.joinGame(0, commitment2, 17);
-//    }
-//
-//    // ============================================
-//    // SUBMIT GUESS TESTS
-//    // ============================================
-//
-//    function test_SubmitGuess_Success() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//
-//        vm.expectEmit(true, true, false, true);
-//        emit GuessSubmitted(0, player1, "a");
-//
-//        hangman.submitGuess(0, "a");
-//
-//        (,, PlayerState memory p1State,,,,,) = hangman.games(0);
-//        assertEq(p1State.currentGuess, "a");
-//        assertEq(p1State.guessedLetters, 1); // Bit 0 set for 'a'
-//    }
-//
-//    function test_SubmitGuess_RevertIf_GameNotActive() public {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.GameNotActive.selector);
-//        hangman.submitGuess(0, "a");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_NotPlayerInGame() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player3);
-//        vm.expectRevert(Hangman.NotPlayerInGame.selector);
-//        hangman.submitGuess(0, "a");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_InvalidLetter_Uppercase() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidInput.selector);
-//        hangman.submitGuess(0, "A");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_InvalidLetter_Number() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidInput.selector);
-//        hangman.submitGuess(0, "1");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_InvalidLetter_Special() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.InvalidInput.selector);
-//        hangman.submitGuess(0, "!");
-//    }
-//
-//    function test_SubmitGuess_RevertIf_RepeatedGuess() public {
-//        _setupActiveGame();
-//
-//        vm.prank(player1);
-//        hangman.submitGuess(0, "a");
-//
-//        // Submit proof to clear currentGuess
-//        uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
-//
-//        vm.prank(player2);
-//        hangman.submitProof(0, "", positions);
-//
-//        // Try to guess 'a' again
-//        vm.prank(player1);
-//        vm.expectRevert(Hangman.GuessRepeated.selector);
-//        hangman.submitGuess(0, "a");
-//    }
-//
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
+import {Test} from "forge-std/Test.sol";
+import {Hangman} from "../src/Hangman.sol";
+import {PlayerState, GameStatus} from "../src/HangmanStructs.sol";
+import {IGroth16Verifier} from "../src/IGroth16Verifier.sol";
+
+contract MockVerifier is IGroth16Verifier {
+  bool public shouldVerify;
+
+  constructor(bool _shouldVerify) {
+    shouldVerify = _shouldVerify;
+  }
+
+  function verifyProof(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, uint[18] calldata _pubSignals) override public view returns (bool) {
+    return shouldVerify;
+  }
+
+  function setShouldVerify(bool _shouldVerify) external {
+    shouldVerify = _shouldVerify;
+  }
+}
+
+contract HangmanTest is Test {
+  Hangman public hangman;
+  MockVerifier public verifier;
+
+  address public owner = address(this);
+  address public player1 = address(0x1);
+  address public player2 = address(0x2);
+  address public player3 = address(0x3);
+
+  uint256  public constant commitment1 = uint256(keccak256(abi.encode(0)));
+  uint256  public constant commitment2 = uint256(keccak256(abi.encode(1)));
+
+  uint8 public constant word1Length = 7;
+  uint8 public constant word2Length = 6;
+
+  uint256 public constant LOWER_A = 97;
+  uint256 public constant UPPER_A = 65;
+  uint256 public constant CHAR_1 = 49;
+  uint256 public constant CHAR_BANG = 33;
+
+  event GameCreated(uint256 indexed gameId, address indexed player1, uint8 wordLength);
+  event GameStarted(uint256 indexed gameId, address indexed player1, address indexed player2);
+  event GuessSubmitted(uint256 indexed gameId, address indexed guesser, uint256 letter);
+  event ProofVerified(uint256 indexed gameId, address indexed prover, uint256[] positions);
+  event GameFinished(uint256 indexed gameId, address indexed winner, string reason);
+
+  function setUp() public {
+    verifier = new MockVerifier(true);
+    hangman = new Hangman(verifier);
+  }
+
+  // ============================================
+  // CONSTRUCTOR & SETUP TESTS
+  // ============================================
+
+  function test_Constructor() public view {
+    assertEq(address(hangman.verifier()), address(verifier));
+    assertEq(hangman.owner(), owner);
+    assertEq(hangman.gameCounter(), 0);
+    assertEq(hangman.MAX_WORD_LEN(), 16);
+    assertEq(hangman.DEFAULT_ATTEMPTS(), 6);
+  }
+
+  function test_SetVerifier_AsOwner() public {
+    MockVerifier newVerifier = new MockVerifier(false);
+
+    vm.expectEmit(true, true, true, true);
+    emit Hangman.VerifierUpdated(newVerifier);
+
+    hangman.setVerifier(newVerifier);
+    assertEq(address(hangman.verifier()), address(newVerifier));
+  }
+
+  function test_SetVerifier_RevertIf_NotOwner() public {
+    MockVerifier newVerifier = new MockVerifier(false);
+
+    vm.prank(player1);
+    vm.expectRevert();
+    hangman.setVerifier(newVerifier);
+  }
+
+  // ============================================
+  // CREATE GAME TESTS
+  // ============================================
+
+  function test_CreateGame_Success() public {
+    vm.prank(player1);
+
+    vm.expectEmit(true, true, false, true);
+    emit GameCreated(0, player1, word1Length);
+
+    hangman.createGame(commitment1, word1Length);
+
+    (address p1, address p2,,, GameStatus status,,,) = hangman.games(0);
+
+    assertEq(p1, player1);
+    assertEq(p2, address(0));
+    assertEq(uint8(status), uint8(GameStatus.WAITING_FOR_PLAYER));
+    assertEq(hangman.gameCounter(), 1);
+  }
+
+  function test_CreateGame_RevertIf_WordTooShort() public {
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidWordLenght.selector);
+    hangman.createGame(commitment1, 0);
+  }
+
+  function test_CreateGame_RevertIf_WordTooLong() public {
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidWordLenght.selector);
+    hangman.createGame(commitment1, 17);
+  }
+
+  function test_CreateGame_MultipleGames() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player2);
+    hangman.createGame(commitment2, word2Length);
+
+    assertEq(hangman.gameCounter(), 2);
+
+    (address p1_game0,,,,,,,) = hangman.games(0);
+    (address p1_game1,,,,,,,) = hangman.games(1);
+
+    assertEq(p1_game0, player1);
+    assertEq(p1_game1, player2);
+  }
+
+  // ============================================
+  // JOIN GAME TESTS
+  // ============================================
+
+  function test_JoinGame_Success() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player2);
+
+    vm.expectEmit(true, true, true, false);
+    emit GameStarted(0, player1, player2);
+
+    hangman.joinGame(0, commitment2, word2Length);
+
+    (address p1, address p2,,, GameStatus status,,,) = hangman.games(0);
+
+    assertEq(p1, player1);
+    assertEq(p2, player2);
+    assertEq(uint8(status), uint8(GameStatus.ACTIVE));
+  }
+
+  function test_JoinGame_RevertIf_GameNotFound() public {
+    vm.prank(player2);
+    vm.expectRevert(Hangman.GameNotFound.selector);
+    hangman.joinGame(999, commitment2, word2Length);
+  }
+
+  function test_JoinGame_RevertIf_AlreadyStarted() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player2);
+    hangman.joinGame(0, commitment2, word2Length);
+
+    vm.prank(player3);
+    vm.expectRevert(Hangman.GameAlreadyStarted.selector);
+    hangman.joinGame(0, commitment2, word2Length);
+  }
+
+  function test_JoinGame_RevertIf_JoiningOwnGame() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidPlayer.selector);
+    hangman.joinGame(0, commitment2, word2Length);
+  }
+
+  function test_JoinGame_RevertIf_InvalidWordLength() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player2);
+    vm.expectRevert(Hangman.InvalidWordLenght.selector);
+    hangman.joinGame(0, commitment2, 0);
+
+    vm.prank(player2);
+    vm.expectRevert(Hangman.InvalidWordLenght.selector);
+    hangman.joinGame(0, commitment2, 17);
+  }
+
+  // ============================================
+  // SUBMIT GUESS TESTS
+  // ============================================
+
+  function test_SubmitGuess_Success() public {
+    _setupActiveGame();
+
+    vm.prank(player1);
+
+    vm.expectEmit(true, true, false, true);
+    emit GuessSubmitted(0, player1, LOWER_A);
+
+    hangman.submitGuess(0, LOWER_A);
+
+    (,, PlayerState memory p1State,,,,,) = hangman.games(0);
+    assertEq(p1State.currentGuess, LOWER_A);
+    assertEq(p1State.guessedLetters, 1); // Bit 0 set for 'a'
+  }
+
+  function test_SubmitGuess_RevertIf_GameNotActive() public {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player1);
+    vm.expectRevert(Hangman.GameNotActive.selector);
+    hangman.submitGuess(0, LOWER_A);
+  }
+
+  function test_SubmitGuess_RevertIf_NotPlayerInGame() public {
+    _setupActiveGame();
+
+    vm.prank(player3);
+    vm.expectRevert(Hangman.NotPlayerInGame.selector);
+    hangman.submitGuess(0, LOWER_A);
+  }
+
+  function test_SubmitGuess_RevertIf_InvalidLetter_Uppercase() public {
+    _setupActiveGame();
+
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidInput.selector);
+    hangman.submitGuess(0, UPPER_A);
+  }
+
+  function test_SubmitGuess_RevertIf_InvalidLetter_Number() public {
+    _setupActiveGame();
+
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidInput.selector);
+    hangman.submitGuess(0, CHAR_1);
+  }
+
+  function test_SubmitGuess_RevertIf_InvalidLetter_Special() public {
+    _setupActiveGame();
+
+    vm.prank(player1);
+    vm.expectRevert(Hangman.InvalidInput.selector);
+    hangman.submitGuess(0, CHAR_BANG);
+  }
+
+  function test_SubmitGuess_RevertIf_RepeatedGuess() public {
+    _setupActiveGame();
+
+    vm.prank(player1);
+    hangman.submitGuess(0, LOWER_A);
+
+    // Submit proof to clear currentGuess
+    uint256[] memory positions = new uint256[](hangman.MAX_WORD_LEN());
+
+    vm.prank(player2);
+    hangman.submitProof(0, _emptyProof(), positions);
+
+    // Try to guess 'a' again
+    vm.prank(player1);
+    vm.expectRevert(Hangman.GuessRepeated.selector);
+    hangman.submitGuess(0, LOWER_A);
+  }
+
 //    function test_SubmitGuess_RevertIf_GuessInCourse() public {
 //        _setupActiveGame();
 //
@@ -585,17 +590,30 @@
 //        assertEq(winner, address(0)); // Tie
 //    }
 //
-//    // ============================================
-//    // HELPER FUNCTIONS
-//    // ============================================
-//
-//    function _setupActiveGame() internal returns (uint256 gameId) {
-//        vm.prank(player1);
-//        hangman.createGame(commitment1, word1Length);
-//
-//        vm.prank(player2);
-//        hangman.joinGame(0, commitment2, word2Length);
-//
-//        return 0;
-//    }
-//}
+  // ============================================
+  // HELPER FUNCTIONS
+  // ============================================
+
+  function _emptyProof() internal returns (Hangman.Proof memory) {
+    Hangman.Proof memory p;
+    p.pA[0] = 0;
+    p.pA[1] = 0;
+    p.pB[0][0] = 0;
+    p.pB[0][1] = 0;
+    p.pB[1][0] = 0;
+    p.pB[1][1] = 0;
+    p.pC[0] = 0;
+    p.pC[1] = 0;
+    return p;
+  }
+
+  function _setupActiveGame() internal returns (uint256 gameId) {
+    vm.prank(player1);
+    hangman.createGame(commitment1, word1Length);
+
+    vm.prank(player2);
+    hangman.joinGame(0, commitment2, word2Length);
+
+    return 0;
+  }
+}

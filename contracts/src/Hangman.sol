@@ -2,17 +2,17 @@
 pragma solidity ^0.8.13;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Groth16Verifier} from "./CircomVerifier.sol";
 import "./HangmanStructs.sol";
+import {IGroth16Verifier} from "./IGroth16Verifier.sol";
 
 contract Hangman is Ownable {
-    Groth16Verifier public verifier;
+    IGroth16Verifier public verifier;
     mapping(uint256 => Game) public games;
     uint256 public gameCounter;
     uint8 public constant MAX_WORD_LEN = 16;
     uint8 public constant DEFAULT_ATTEMPTS = 6;
 
-    event VerifierUpdated(Groth16Verifier _newVerifier);
+    event VerifierUpdated(IGroth16Verifier _newVerifier);
     event GameCreated(uint256 indexed gameId, address indexed player1, uint8 wordLength);
     event GameStarted(uint256 indexed gameId, address indexed player1, address indexed player2);
     event GuessSubmitted(uint256 indexed gameId, address indexed guesser, uint256 letter);
@@ -38,11 +38,11 @@ contract Hangman is Ownable {
       uint[2] pC;
     }
 
-    constructor(Groth16Verifier _verifier) Ownable(msg.sender) {
+    constructor(IGroth16Verifier _verifier) Ownable(msg.sender) {
         verifier = _verifier;
     }
 
-    function setVerifier(Groth16Verifier _newVerifier) external onlyOwner {
+    function setVerifier(IGroth16Verifier _newVerifier) external onlyOwner {
         verifier = _newVerifier;
         emit VerifierUpdated(_newVerifier);
     }
