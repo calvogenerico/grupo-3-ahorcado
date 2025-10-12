@@ -2,20 +2,20 @@
 pragma solidity ^0.8.13;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IVerifier} from "./Verifier.sol";
+import {Groth16Verifier} from "./CircomVerifier.sol";
 import "./HangmanStructs.sol";
 
 contract Hangman is Ownable {
-    IVerifier public verifier;
+    Groth16Verifier public verifier;
     mapping(uint256 => Game) public games;
     uint256 public gameCounter;
     uint8 public constant MAX_WORD_LEN = 16;
     uint8 public constant DEFAULT_ATTEMPTS = 6;
 
-    event VerifierUpdated(IVerifier _newVerifier);
+    event VerifierUpdated(Groth16Verifier _newVerifier);
     event GameCreated(uint256 indexed gameId, address indexed player1, uint8 wordLength);
     event GameStarted(uint256 indexed gameId, address indexed player1, address indexed player2);
-    event GuessSubmitted(uint256 indexed gameId, address indexed guesser, bytes1 letter);
+    event GuessSubmitted(uint256 indexed gameId, address indexed guesser, uint256 letter);
     event ProofVerified(uint256 indexed gameId, address indexed prover, uint256[] positions);
     event GameFinished(uint256 indexed gameId, address indexed winner, string reason);
 
@@ -32,11 +32,17 @@ contract Hangman is Ownable {
     error Cheater();
     error DeadPlayer();
 
-    constructor(IVerifier _verifier) Ownable(msg.sender) {
+    struct Proof {
+      uint[2] pA;
+      uint[2][2] pB;
+      uint[2] pC;
+    }
+
+    constructor(Groth16Verifier _verifier) Ownable(msg.sender) {
         verifier = _verifier;
     }
 
-    function setVerifier(IVerifier _newVerifier) external onlyOwner {
+    function setVerifier(Groth16Verifier _newVerifier) external onlyOwner {
         verifier = _newVerifier;
         emit VerifierUpdated(_newVerifier);
     }
@@ -46,7 +52,7 @@ contract Hangman is Ownable {
      * @param _wordCommitment Poseidon hash of the secret word
      * @param _wordLength Length of the secret word
      */
-    function createGame(bytes32 _wordCommitment, uint8 _wordLength) external {
+    function createGame(uint256 _wordCommitment, uint8 _wordLength) external {
         if (_wordCommitment == 0
           || _wordLength > MAX_WORD_LEN
           || _wordLength == 0) revert InvalidWordLenght();
@@ -71,7 +77,7 @@ contract Hangman is Ownable {
      * @param _wordCommitment Hash of your secret word
      * @param _wordLength Length of your secret word
      */
-    function joinGame(uint256 _gameId, bytes32 _wordCommitment, uint8 _wordLength) external {
+    function joinGame(uint256 _gameId, uint256 _wordCommitment, uint8 _wordLength) external {
         Game storage game = games[_gameId];
 
         if (game.player1 == address(0)) revert GameNotFound();
@@ -91,8 +97,8 @@ contract Hangman is Ownable {
         game.player1State.remainingAttempts = DEFAULT_ATTEMPTS;
         game.player2State.remainingAttempts = DEFAULT_ATTEMPTS;
 
-        game.player1State.revealedLetters = new bytes1[](game.player2State.wordLength);
-        game.player2State.revealedLetters = new bytes1[](game.player1State.wordLength);
+        game.player1State.revealedLetters = new uint256[](game.player2State.wordLength);
+        game.player2State.revealedLetters = new uint256[](game.player1State.wordLength);
 
         emit GameStarted(_gameId, game.player1, msg.sender);
     }
@@ -103,7 +109,7 @@ contract Hangman is Ownable {
      * @param _letter The letter to guess (lowercase a-z)
      */
 
-    function submitGuess(uint256 _gameId, bytes1 _letter) external {
+    function submitGuess(uint256 _gameId, uint256 _letter) external {
         Game storage game = games[_gameId];
 
         if (game.player1 == address(0)) revert GameNotFound();
@@ -139,8 +145,8 @@ contract Hangman is Ownable {
         emit GuessSubmitted(_gameId, msg.sender, _letter);
     }
 
-    function testVerify(bytes calldata proof, bytes32[] calldata publicInputs) public returns (bool) {
-      return verifier.verify(proof, publicInputs);
+    function testVerify(Proof calldata proof, uint[18] calldata pubSignals) public returns (bool) {
+      return verifier.verifyProof(proof.pA, proof.pB, proof.pC, pubSignals);
     }
 
     /**
@@ -151,7 +157,7 @@ contract Hangman is Ownable {
      */
     function submitProof(
         uint256 _gameId,
-        bytes calldata _proof,
+        Proof calldata _proof,
         uint256[] calldata _letterPositions
     ) external {
         Game storage game = games[_gameId];
@@ -179,15 +185,15 @@ contract Hangman is Ownable {
             if (_letterPositions[i] != 0) revert InvalidInput();
         }
 
-        bytes32[] memory publicInputs = new bytes32[](2 + MAX_WORD_LEN);
+        uint256[18] memory publicInputs;
         publicInputs[0] = myState.wordCommitment;
         publicInputs[1] = opponentState.currentGuess;
 
         for (uint256 i = 0; i < MAX_WORD_LEN; i++) {
-            publicInputs[2 + i] = bytes32(_letterPositions[i]);
+            publicInputs[2 + i] = _letterPositions[i];
         }
 
-        bool proofIsValid = verifier.verify(_proof, publicInputs);
+        bool proofIsValid = verifier.verifyProof(_proof.pA, _proof.pB , _proof.pC,publicInputs);
 
         if (!proofIsValid) revert Cheater();
 
@@ -263,7 +269,7 @@ contract Hangman is Ownable {
         }
     }
 
-    function _isWordComplete(bytes1[] storage revealedLetters) internal view returns (bool) {
+    function _isWordComplete(uint256[] storage revealedLetters) internal view returns (bool) {
         for (uint256 i = 0; i < revealedLetters.length; i++) {
             if (revealedLetters[i] == 0) return false;
         }
@@ -309,7 +315,7 @@ contract Hangman is Ownable {
      * @param _gameId The game ID
      * @param _playerNum 1 for player1's word, 2 for player2's word
      */
-    function getRevealedLetters(uint256 _gameId, uint8 _playerNum) external view returns (bytes1[] memory) {
+    function getRevealedLetters(uint256 _gameId, uint8 _playerNum) external view returns (uint256[] memory) {
         Game storage game = games[_gameId];
         if (_playerNum == 1) {
             return game.player1State.revealedLetters;

@@ -4,20 +4,20 @@ pragma solidity ^0.8.13;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {Counter} from "../src/Counter.sol";
-import {HonkVerifier} from "../src/Verifier.sol";
+import {Groth16Verifier} from "../src/CircomVerifier.sol";
 import {Hangman} from "../src/Hangman.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract CounterScript is Script {
     Counter public counter;
-    HonkVerifier public verifier;
+    Groth16Verifier public verifier;
     Hangman public hangman;
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
-        verifier = new HonkVerifier();
+        verifier = new Groth16Verifier();
         hangman = new Hangman(verifier);
 
         string memory verifierMsg = string.concat("VERIFIER_ADDRESS=", Strings.toHexString(address(verifier)));
