@@ -5,7 +5,7 @@ export const hangmanAbi = [
       {
         "name": "_verifier",
         "type": "address",
-        "internalType": "contract IVerifier"
+        "internalType": "contract IGroth16Verifier"
       }
     ],
     "stateMutability": "nonpayable"
@@ -55,8 +55,8 @@ export const hangmanAbi = [
     "inputs": [
       {
         "name": "_wordCommitment",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "_wordLength",
@@ -113,8 +113,8 @@ export const hangmanAbi = [
           },
           {
             "name": "wordCommitment",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "wordLength",
@@ -123,8 +123,8 @@ export const hangmanAbi = [
           },
           {
             "name": "revealedLetters",
-            "type": "bytes1[]",
-            "internalType": "bytes1[]"
+            "type": "uint256[]",
+            "internalType": "uint256[]"
           },
           {
             "name": "guessedLetters",
@@ -133,8 +133,8 @@ export const hangmanAbi = [
           },
           {
             "name": "currentGuess",
-            "type": "bytes1",
-            "internalType": "bytes1"
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "lastActionTime",
@@ -155,8 +155,8 @@ export const hangmanAbi = [
           },
           {
             "name": "wordCommitment",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "wordLength",
@@ -165,8 +165,8 @@ export const hangmanAbi = [
           },
           {
             "name": "revealedLetters",
-            "type": "bytes1[]",
-            "internalType": "bytes1[]"
+            "type": "uint256[]",
+            "internalType": "uint256[]"
           },
           {
             "name": "guessedLetters",
@@ -175,8 +175,8 @@ export const hangmanAbi = [
           },
           {
             "name": "currentGuess",
-            "type": "bytes1",
-            "internalType": "bytes1"
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
             "name": "lastActionTime",
@@ -280,8 +280,8 @@ export const hangmanAbi = [
     "outputs": [
       {
         "name": "",
-        "type": "bytes1[]",
-        "internalType": "bytes1[]"
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       }
     ],
     "stateMutability": "view"
@@ -297,8 +297,8 @@ export const hangmanAbi = [
       },
       {
         "name": "_wordCommitment",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "_wordLength",
@@ -336,7 +336,7 @@ export const hangmanAbi = [
       {
         "name": "_newVerifier",
         "type": "address",
-        "internalType": "contract IVerifier"
+        "internalType": "contract IGroth16Verifier"
       }
     ],
     "outputs": [],
@@ -353,8 +353,8 @@ export const hangmanAbi = [
       },
       {
         "name": "_letter",
-        "type": "bytes1",
-        "internalType": "bytes1"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -371,8 +371,25 @@ export const hangmanAbi = [
       },
       {
         "name": "_proof",
-        "type": "bytes",
-        "internalType": "bytes"
+        "type": "tuple",
+        "internalType": "struct Hangman.Proof",
+        "components": [
+          {
+            "name": "pA",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "pB",
+            "type": "uint256[2][2]",
+            "internalType": "uint256[2][2]"
+          },
+          {
+            "name": "pC",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          }
+        ]
       },
       {
         "name": "_letterPositions",
@@ -389,13 +406,30 @@ export const hangmanAbi = [
     "inputs": [
       {
         "name": "proof",
-        "type": "bytes",
-        "internalType": "bytes"
+        "type": "tuple",
+        "internalType": "struct Hangman.Proof",
+        "components": [
+          {
+            "name": "pA",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "pB",
+            "type": "uint256[2][2]",
+            "internalType": "uint256[2][2]"
+          },
+          {
+            "name": "pC",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          }
+        ]
       },
       {
-        "name": "publicInputs",
-        "type": "bytes32[]",
-        "internalType": "bytes32[]"
+        "name": "pubSignals",
+        "type": "uint256[18]",
+        "internalType": "uint256[18]"
       }
     ],
     "outputs": [
@@ -405,7 +439,7 @@ export const hangmanAbi = [
         "internalType": "bool"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -428,7 +462,7 @@ export const hangmanAbi = [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IVerifier"
+        "internalType": "contract IGroth16Verifier"
       }
     ],
     "stateMutability": "view"
@@ -526,9 +560,9 @@ export const hangmanAbi = [
       },
       {
         "name": "letter",
-        "type": "bytes1",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "bytes1"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -585,7 +619,7 @@ export const hangmanAbi = [
         "name": "_newVerifier",
         "type": "address",
         "indexed": false,
-        "internalType": "contract IVerifier"
+        "internalType": "contract IGroth16Verifier"
       }
     ],
     "anonymous": false

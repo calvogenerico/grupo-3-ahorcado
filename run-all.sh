@@ -8,8 +8,8 @@ docker compose down;
 docker compose up -d;
 
 (
-    cd $HERE/noir_circuits &&
-    bash $HERE/noir_circuits/export-verifier-contract.sh
+    cd $HERE/circom_circuits &&
+    bash $HERE/circom_circuits/export-verifier.sh
 )
 (
     cd $HERE/contracts &&

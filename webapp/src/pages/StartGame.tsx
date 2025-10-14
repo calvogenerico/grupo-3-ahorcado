@@ -1,4 +1,4 @@
-import {  useCallback, useEffect } from "react";
+import {  useCallback } from "react";
 import { useHangman } from "../hooks/useHangman"
 import { useZk } from "../hooks/useZk";
 

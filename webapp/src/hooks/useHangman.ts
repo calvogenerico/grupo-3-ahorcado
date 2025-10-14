@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { hangmanAbi } from "../abis/hangman-abi";
-import { bytesToHex, numberToHex, pad, parseEventLogs, type Hex } from "viem";
+import { parseEventLogs } from "viem";
 
 const HANGMAN_ADDRESS= import.meta.env.VITE_HANGMAN_ADDRESS;
 
@@ -30,7 +30,7 @@ export function useHangman() {
   const navigate = useNavigate();
   const { data: walletClient, error } = useWalletClient();
   const publicClient = usePublicClient();
-  
+
   const startGame = useAsyncAction(async (commitment: bigint) => {
     if (!isConnected || !walletClient || !publicClient) {
       console.log(error);
@@ -47,11 +47,11 @@ export function useHangman() {
       abi: hangmanAbi,
       functionName: 'createGame',
       address: HANGMAN_ADDRESS,
-      args: [pad(numberToHex(commitment)), 16]
+      args: [commitment, 16]
     });
 
     const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash});
-    const logs = parseEventLogs({ 
+    const logs = parseEventLogs({
       abi: hangmanAbi,
       logs: receipt.logs,
     });
@@ -90,7 +90,7 @@ export function useHangman() {
     const txHash = await walletClient.writeContract({
       abi: hangmanAbi,
       functionName: 'joinGame',
-      args: [BigInt(gameId), pad(numberToHex(commitment)), 16],
+      args: [BigInt(gameId), commitment, 16],
       address: HANGMAN_ADDRESS
     });
 
@@ -127,7 +127,7 @@ export function useHangman() {
     const txHash = await walletClient.writeContract({
       abi: hangmanAbi,
       functionName: 'submitGuess',
-      args: [BigInt(gameId), numberToHex(charCode)],
+      args: [BigInt(gameId), BigInt(charCode)],
       address: HANGMAN_ADDRESS
     });
 
@@ -151,51 +151,11 @@ export function useHangman() {
     }
   });
 
-  const submitProof = useAsyncAction(async (gameId: string, proof: Uint8Array, positions: boolean[]) => {
-    if (!walletClient || !publicClient) {
-      console.log(walletClient, error);
-      throw new Error('falta algo');
-    }
-
-    const positionsNums = positions.map(b => b ? 1n : 0n);
-
-    console.log('ANTEs')
-    const txHash = await walletClient.writeContract({
-      abi: hangmanAbi,
-      functionName: 'submitProof',
-      args: [BigInt(gameId), bytesToHex(proof), positionsNums],
-      address: HANGMAN_ADDRESS
-    });
-    console.log('DESPUES')
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    console.log('receipt', receipt);
-
-    const logs = parseEventLogs({
-      abi: hangmanAbi,
-      logs: receipt.logs
-    });
-
-    const log = logs.find(l => l.eventName === 'ProofVerified');
-
-    if(log === undefined) {
-      throw new Error('No log!')
-    }
-    
-    return {
-      gameId: log.topics[0],
-      playar: log.topics[1],
-      positions: log.topics[2]
-    }
-  })
-
 
   return {
     startGame,
     gameById,
     joinGame,
-    submitGuess,
-    submitProof
+    submitGuess
   }
 }
