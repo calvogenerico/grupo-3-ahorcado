@@ -1,29 +1,11 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { hangmanAbi } from "../abis/hangman-abi";
 import { parseEventLogs } from "viem";
+import { useAsyncAction } from "./useAsyncAction.ts";
 
 const HANGMAN_ADDRESS= import.meta.env.VITE_HANGMAN_ADDRESS;
 
-export function useAsyncAction<T>(callback: (...args: any[]) => Promise<T>) {
-  const [waiting, setWaiting] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [res, setRes] = useState<T | undefined>(undefined);
-  const call = async (...args: any[]) => {
-    setWaiting(true);
-    const res = await callback(...args);
-    setRes(res);
-    setWaiting(false);
-    setReady(true);
-  };
-  return {
-    call,
-    waiting,
-    res,
-    ready
-  }
-}
 
 export function useHangman() {
   const { isConnected } = useAccount();
@@ -33,9 +15,6 @@ export function useHangman() {
 
   const startGame = useAsyncAction(async (commitment: bigint) => {
     if (!isConnected || !walletClient || !publicClient) {
-      console.log(error);
-      console.log("isConnected", isConnected);
-      console.log("walletClient", walletClient);
       navigate('/');
     }
 
