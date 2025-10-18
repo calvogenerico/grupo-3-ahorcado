@@ -166,16 +166,11 @@ export function useLocalGameState(id: bigint): LoadedGame {
   }
 }
 
-type NewGame = {
-  game: GameLocalState,
-  setGame: (g: GameLocalState) => void
-}
+type NewGame = (id: bigint, secretWord: string, ourAddress: Hex) => void;
 
-export function useNewGame(id: bigint, secretWord: string, ourAddress: Hex): NewGame {
-  const [game, setGame] = useState<GameLocalState>(GameLocalState.empty(secretWord, ourAddress));
-
-  return {
-    game,
-    setGame: useWrappedUpdate(setGame, id)
-  }
+export function useStoreNewGame(): NewGame {
+  return useCallback((id: bigint, secretWord: string, ourAddress: Hex) => {
+    const game = GameLocalState.empty(secretWord, ourAddress);
+    localStorage.setItem(gameKey(id), game.serialize())
+  }, [])
 }

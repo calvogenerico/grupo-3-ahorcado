@@ -2,6 +2,7 @@ import './App.css'
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import { WalletOptions } from './components/wallet-options'
 import { anvil } from 'viem/chains'
+import { Link } from "react-router";
 
 function ConnectWallet() {
   const { isConnected } = useAccount()
@@ -16,9 +17,6 @@ function ConnectWallet() {
 function SwitchChainButton() {
   const { chains, switchChain } = useSwitchChain();
   const chainId = useChainId();
-
-  console.log('chainId', chainId);
-  console.log('anvil.id', anvil.id);
 
   const chain = chains.find(chain => chain.id === anvil.id);
 
@@ -44,10 +42,8 @@ function App() {
         <SwitchChainButton />
       </div>
       <div className="card">
+        <Link to={'/new'}>Crear un juego</Link>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }

@@ -1,31 +1,29 @@
-
 import { useState } from "react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Fn = (...args: any) => Promise<any>;
+// type Fn<T extends (...args: Parameters<T>) => ReturnType<T>> =
 
-type AsyncAction<T extends Fn> = {
+type AsyncAction<Arg, Ret> = {
   waiting: boolean;
   ready: boolean;
-  res: Awaited<ReturnType<T>> | undefined;
-  call: (...args: Parameters<T>) => void | Promise<void>;
+  res: Ret | undefined;
+  call: (a: Arg) => Promise<Ret>
 }
 
-export function useAsyncAction<T extends Fn>(callback: T): AsyncAction<T> {
+export function useAsyncAction<Arg, Ret>(callback: (a: Arg) => Promise<Ret>): AsyncAction<Arg, Ret> {
   const [waiting, setWaiting] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [res, setRes] = useState<AsyncAction<T>['res']>(undefined);
-  const call = async (...args: Parameters<T>) => {
+  const [res, setRes] = useState<Ret | undefined>(undefined);
+  const [ready, setReady] = useState<boolean>(false);
+  const call = async (arg: Arg): Promise<Ret> => {
     setWaiting(true);
-    const res = await callback(...args);
+    const res = await callback(arg).finally(() => setReady(true));
     setRes(res);
     setWaiting(false);
-    setReady(true);
-  };
+    return res;
+  }
 
   return {
-    call,
     waiting,
+    call,
     res,
     ready
   }
