@@ -3,6 +3,8 @@ import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { hangmanAbi } from "../abis/hangman-abi";
 import { parseEventLogs } from "viem";
 import { useAsyncAction } from "./useAsyncAction.ts";
+import { HangmanGame, PlayerState } from "./HagmanState.ts";
+import { useEffect, useState } from "react";
 
 const HANGMAN_ADDRESS = import.meta.env.VITE_HANGMAN_ADDRESS;
 
@@ -46,18 +48,6 @@ export function useHangman() {
       gameId: BigInt(newGameLog.topics[1]),
     };
   });
-
-  // const gameById = useAsyncAction(async (gameId: string) => {
-  //   if (!publicClient) {
-  //     throw new Error();
-  //   }
-  //   return publicClient.readContract({
-  //     abi: hangmanAbi,
-  //     functionName: 'games',
-  //     args: [BigInt(gameId)],
-  //     address: import.meta.env.VITE_HANGMAN_ADDRESS,
-  //   });
-  // });
   //
   //
   // const joinGame = useAsyncAction(async (gameId: string, commitment: bigint) => {
@@ -133,8 +123,71 @@ export function useHangman() {
 
   return {
     startGame,
-    // gameById,
-    // joinGame,
-    // submitGuess
   }
 }
+
+
+type GameById = {
+  ready: true,
+  game: HangmanGame
+} | {
+  ready: false,
+  game: null
+}
+
+export const useGameById = (gameId: bigint): GameById => {
+  const publicClient = usePublicClient();
+  const [game, setGame] = useState<HangmanGame | null>(null);
+  if (!publicClient) {
+    throw new Error();
+  }
+
+  useEffect(() => {
+    publicClient.readContract({
+      abi: hangmanAbi,
+      functionName: 'games',
+      args: [BigInt(gameId)],
+      address: import.meta.env.VITE_HANGMAN_ADDRESS,
+    }).then(res => {
+      const state1 = new PlayerState(
+        res[2].remainingAttempts,
+        res[2].wordCommitment,
+        res[2].wordLength,
+        [...res[2].revealedLetters],
+        res[2].guessedLetters,
+        res[2].currentGuess,
+        res[2].lastActionTime
+      )
+
+      const state2 = new PlayerState(
+        res[3].remainingAttempts,
+        res[3].wordCommitment,
+        res[3].wordLength,
+        [...res[3].revealedLetters],
+        res[3].guessedLetters,
+        res[3].currentGuess,
+        res[3].lastActionTime
+      )
+
+      setGame(new HangmanGame(
+        res[0],
+        res[1],
+        state1,
+        state2,
+        res[4]
+      ));
+    });
+  }, [gameId]);
+
+  if (game === null) {
+    return {
+      ready: false,
+      game: null
+    }
+  } else {
+    return {
+      ready: true,
+      game
+    }
+  }
+};
