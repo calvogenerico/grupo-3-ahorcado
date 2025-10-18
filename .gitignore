@@ -3,6 +3,8 @@ lib
 
 noir_circuits/target
 webapp/.env
+circom_circuits/target
+circom_circuits/ptaus
 
 # ide's
 .idea

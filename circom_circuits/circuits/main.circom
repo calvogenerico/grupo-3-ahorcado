@@ -1,9 +1,5 @@
 pragma circom 2.2.2;
 
-template EntryPoint() {
-    input signal in;
+include "./hangman.circom";
 
-    in === 10;
-}
-
-component main = EntryPoint();
+component main{public [commitment, guess, positions]} = Hangman(16);

@@ -1,40 +1,20 @@
 import { useParams } from "react-router";
-import { useHangman } from "../hooks/useHangman";
-import { useCallback, useEffect } from "react";
-import { useZk } from "../hooks/useZk";
+import { useGameById } from "../hooks/useHangman";
 
 export function JoinGame() {
   const params = useParams();
-  const { calculateCommitment } = useZk();
+  const gameRes = useGameById(BigInt(params.gameId!));
 
-
-  const { gameById, joinGame } = useHangman();
-
-  useEffect(() => {
-    gameById.call(params.gameId)
-  }, []);
-
-  const onClick = useCallback(async () => {
-    const { commitment } = calculateCommitment('coso');
-    await joinGame.call(params.gameId, commitment);
-  }, [joinGame.call])
-
-  if (!gameById.res) {
-    return 'waiting...'
+  if (!gameRes.ready) {
+    return <div>waiting...</div>
   }
 
-  console.log(gameById.res);
+  const game = gameRes.game;
 
   return <div>
     <div>
-      <div>Player 1: {gameById.res[0]}</div>
-      <div>Player 2: {gameById.res[1]}</div>
-    </div>
-    <div>
-      {joinGame.res?.toString() || ''}
-    </div>
-    <div>
-      <button onClick={onClick}>Join</button>
+      <div>Player 1: {game.player1}</div>
+      <div>Player 2: {game.player2}</div>
     </div>
   </div>
 }

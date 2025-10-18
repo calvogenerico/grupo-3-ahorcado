@@ -1,41 +1,22 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { hangmanAbi } from "../abis/hangman-abi";
-import { bytesToHex, numberToHex, pad, parseEventLogs, type Hex } from "viem";
+import { parseEventLogs } from "viem";
+import { useAsyncAction } from "./useAsyncAction.ts";
+import { HangmanGame, PlayerState } from "./HagmanState.ts";
+import { useEffect, useState } from "react";
 
-const HANGMAN_ADDRESS= import.meta.env.VITE_HANGMAN_ADDRESS;
+const HANGMAN_ADDRESS = import.meta.env.VITE_HANGMAN_ADDRESS;
 
-export function useAsyncAction<T>(callback: (...args: any[]) => Promise<T>) {
-  const [waiting, setWaiting] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [res, setRes] = useState<T | undefined>(undefined);
-  const call = async (...args: any[]) => {
-    setWaiting(true);
-    const res = await callback(...args);
-    setRes(res);
-    setWaiting(false);
-    setReady(true);
-  };
-  return {
-    call,
-    waiting,
-    res,
-    ready
-  }
-}
 
 export function useHangman() {
-  const { isConnected } = useAccount();
+  const {isConnected} = useAccount();
   const navigate = useNavigate();
-  const { data: walletClient, error } = useWalletClient();
+  const {data: walletClient} = useWalletClient();
   const publicClient = usePublicClient();
-  
+
   const startGame = useAsyncAction(async (commitment: bigint) => {
     if (!isConnected || !walletClient || !publicClient) {
-      console.log(error);
-      console.log("isConnected", isConnected);
-      console.log("walletClient", walletClient);
       navigate('/');
     }
 
@@ -47,11 +28,11 @@ export function useHangman() {
       abi: hangmanAbi,
       functionName: 'createGame',
       address: HANGMAN_ADDRESS,
-      args: [pad(numberToHex(commitment)), 16]
+      args: [commitment, 16]
     });
 
-    const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash});
-    const logs = parseEventLogs({ 
+    const receipt = await publicClient!.waitForTransactionReceipt({hash: txHash});
+    const logs = parseEventLogs({
       abi: hangmanAbi,
       logs: receipt.logs,
     });
@@ -59,143 +40,154 @@ export function useHangman() {
     const newGameLog = logs.find(l => l.eventName === 'GameCreated');
 
     if (newGameLog === undefined) {
-      throw new  Error('No new game event');
+      throw new Error('No new game event');
     }
 
     return {
       txHash: txHash,
-      gameId: newGameLog.topics[1],
+      gameId: BigInt(newGameLog.topics[1]),
     };
   });
-
-  const gameById = useAsyncAction(async (gameId: string) => {
-    if (!publicClient) {
-      throw new Error();
-    }
-    return publicClient.readContract({
-      abi: hangmanAbi,
-      functionName: 'games',
-      args: [BigInt(gameId)],
-      address: import.meta.env.VITE_HANGMAN_ADDRESS,
-    });
-  });
-
-
-  const joinGame = useAsyncAction(async (gameId: string, commitment: bigint) => {
-    if (!walletClient || !publicClient) {
-      console.log(walletClient);
-      throw new Error('a');
-    }
-
-    const txHash = await walletClient.writeContract({
-      abi: hangmanAbi,
-      functionName: 'joinGame',
-      args: [BigInt(gameId), pad(numberToHex(commitment)), 16],
-      address: HANGMAN_ADDRESS
-    });
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    const logs = parseEventLogs({
-      abi: hangmanAbi,
-      logs: receipt.logs
-    });
-
-    const log = logs.find(l => l.eventName === 'GameStarted');
-
-    if (!log) {
-      throw new Error('No tiró nada');
-    }
-
-
-    return {
-      gameId: log.topics[0],
-      player1: log.topics[1],
-      player2: log.topics[2],
-    };
-  });
-
-  const submitGuess = useAsyncAction(async(gameId: string, guess: string) => {
-    if (!walletClient || !publicClient) {
-      console.log(walletClient, error);
-      throw new Error('falta algo');
-    }
-    console.log('guess', guess)
-
-    const charCode = guess.charCodeAt(0);
-
-    const txHash = await walletClient.writeContract({
-      abi: hangmanAbi,
-      functionName: 'submitGuess',
-      args: [BigInt(gameId), numberToHex(charCode)],
-      address: HANGMAN_ADDRESS
-    });
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    const logs = parseEventLogs({
-      abi: hangmanAbi,
-      logs: receipt.logs
-    });
-
-    const log = logs.find(l => l.eventName === 'GuessSubmitted');
-
-    if (!log) {
-      throw new Error('there should be a log');
-    }
-
-    return {
-      gameId: log.topics[0],
-      player: log.topics[1],
-      guess: log.topics[2]
-    }
-  });
-
-  const submitProof = useAsyncAction(async (gameId: string, proof: Uint8Array, positions: boolean[]) => {
-    if (!walletClient || !publicClient) {
-      console.log(walletClient, error);
-      throw new Error('falta algo');
-    }
-
-    const positionsNums = positions.map(b => b ? 1n : 0n);
-
-    console.log('ANTEs')
-    const txHash = await walletClient.writeContract({
-      abi: hangmanAbi,
-      functionName: 'submitProof',
-      args: [BigInt(gameId), bytesToHex(proof), positionsNums],
-      address: HANGMAN_ADDRESS
-    });
-    console.log('DESPUES')
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    console.log('receipt', receipt);
-
-    const logs = parseEventLogs({
-      abi: hangmanAbi,
-      logs: receipt.logs
-    });
-
-    const log = logs.find(l => l.eventName === 'ProofVerified');
-
-    if(log === undefined) {
-      throw new Error('No log!')
-    }
-    
-    return {
-      gameId: log.topics[0],
-      playar: log.topics[1],
-      positions: log.topics[2]
-    }
-  })
+  //
+  //
+  // const joinGame = useAsyncAction(async (gameId: string, commitment: bigint) => {
+  //   if (!walletClient || !publicClient) {
+  //     console.log(walletClient);
+  //     throw new Error('a');
+  //   }
+  //
+  //   const txHash = await walletClient.writeContract({
+  //     abi: hangmanAbi,
+  //     functionName: 'joinGame',
+  //     args: [BigInt(gameId), commitment, 16],
+  //     address: HANGMAN_ADDRESS
+  //   });
+  //
+  //   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  //
+  //   const logs = parseEventLogs({
+  //     abi: hangmanAbi,
+  //     logs: receipt.logs
+  //   });
+  //
+  //   const log = logs.find(l => l.eventName === 'GameStarted');
+  //
+  //   if (!log) {
+  //     throw new Error('No tiró nada');
+  //   }
+  //
+  //
+  //   return {
+  //     gameId: log.topics[0],
+  //     player1: log.topics[1],
+  //     player2: log.topics[2],
+  //   };
+  // });
+  //
+  // const submitGuess = useAsyncAction(async(gameId: string, guess: string) => {
+  //   if (!walletClient || !publicClient) {
+  //     console.log(walletClient, error);
+  //     throw new Error('falta algo');
+  //   }
+  //   console.log('guess', guess)
+  //
+  //   const charCode = guess.charCodeAt(0);
+  //
+  //   const txHash = await walletClient.writeContract({
+  //     abi: hangmanAbi,
+  //     functionName: 'submitGuess',
+  //     args: [BigInt(gameId), BigInt(charCode)],
+  //     address: HANGMAN_ADDRESS
+  //   });
+  //
+  //   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  //
+  //   const logs = parseEventLogs({
+  //     abi: hangmanAbi,
+  //     logs: receipt.logs
+  //   });
+  //
+  //   const log = logs.find(l => l.eventName === 'GuessSubmitted');
+  //
+  //   if (!log) {
+  //     throw new Error('there should be a log');
+  //   }
+  //
+  //   return {
+  //     gameId: log.topics[0],
+  //     player: log.topics[1],
+  //     guess: log.topics[2]
+  //   }
+  // });
 
 
   return {
     startGame,
-    gameById,
-    joinGame,
-    submitGuess,
-    submitProof
   }
 }
+
+
+type GameById = {
+  ready: true,
+  game: HangmanGame
+} | {
+  ready: false,
+  game: null
+}
+
+export const useGameById = (gameId: bigint): GameById => {
+  const publicClient = usePublicClient();
+  const [game, setGame] = useState<HangmanGame | null>(null);
+  if (!publicClient) {
+    throw new Error();
+  }
+
+  useEffect(() => {
+    publicClient.readContract({
+      abi: hangmanAbi,
+      functionName: 'games',
+      args: [BigInt(gameId)],
+      address: import.meta.env.VITE_HANGMAN_ADDRESS,
+    }).then(res => {
+      const state1 = new PlayerState(
+        res[2].remainingAttempts,
+        res[2].wordCommitment,
+        res[2].wordLength,
+        [...res[2].revealedLetters],
+        res[2].guessedLetters,
+        res[2].currentGuess,
+        res[2].lastActionTime
+      )
+
+      const state2 = new PlayerState(
+        res[3].remainingAttempts,
+        res[3].wordCommitment,
+        res[3].wordLength,
+        [...res[3].revealedLetters],
+        res[3].guessedLetters,
+        res[3].currentGuess,
+        res[3].lastActionTime
+      )
+
+      setGame(new HangmanGame(
+        res[0],
+        res[1],
+        state1,
+        state2,
+        res[4]
+      ));
+    });
+  }, [gameId]);
+
+  if (game === null) {
+    return {
+      ready: false,
+      game: null
+    }
+  } else {
+    return {
+      ready: true,
+      game
+    }
+  }
+};

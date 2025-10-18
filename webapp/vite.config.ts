@@ -6,7 +6,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 export default defineConfig({
   optimizeDeps: {
     esbuildOptions: { target: 'esnext' },
-    exclude: ['@noir-lang/noirc_abi', '@noir-lang/acvm_js', "@aztec/bb.js"],
+    exclude: ['snarkjs'],
   },
   plugins: [
     react(),
